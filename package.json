@@ -1,0 +1,9 @@
+{
+  "name": "tizen-glass-dashboard",
+  "appName": "Glass Dashboard",
+  "version": "1.0.0",
+  "description": "Minimal Apple-glass home dashboard: clock, weather, app tiles and Stremio trending suggestions.",
+  "packageType": "app",
+  "appPath": "index.html",
+  "keys": []
+}

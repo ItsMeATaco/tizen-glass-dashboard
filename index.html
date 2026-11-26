@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glass Dashboard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="bg"></div>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <div class="clock"><span id="time">--:--</span><span class="ampm" id="ampm"></span></div>
+      <div class="date" id="date"></div>
+    </div>
+    <div class="weather glass">
+      <div class="wicon" id="wicon"></div>
+      <div class="wtemp" id="wtemp">--&deg;</div>
+      <div class="wmeta">
+        <div class="wcond" id="wcond">Loading&hellip;</div>
+        <div class="wcity" id="wcity"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="apps" id="apps"></div>
+
+  <div class="stitle">Trending Movies <span class="sub">via Stremio</span></div>
+  <div class="posters" id="movies"></div>
+
+  <div class="stitle">Trending Series <span class="sub">via Stremio</span></div>
+  <div class="posters" id="series"></div>
+</div>
+
+<div class="overlay hidden" id="overlay">
+  <div class="detail glass">
+    <img id="dposter" src="" alt="">
+    <div class="dinfo">
+      <div class="dtitle" id="dtitle"></div>
+      <div class="dmeta" id="dmeta"></div>
+      <div class="ddesc" id="ddesc"></div>
+      <div class="dbtns">
+        <div class="btn primary" id="dopen">Open in Stremio</div>
+        <div class="btn" id="dclose">Close</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
