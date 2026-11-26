@@ -99,12 +99,15 @@
     { name: "Plex", id: "kIciSQlYEM.plex", icon: "plex" },
     { name: "Tubi", id: "3KA0pm7a7V.TubiTV", icon: "tubi" }
   ];
+  function restLaunch(id) {
+    fetch("http://127.0.0.1:8001/api/v2/applications/" + encodeURIComponent(id), { method: "POST" })
+      .then(function (r) { if (!r.ok) throw new Error("http " + r.status); })
+      .catch(function () { toast("Could not launch app"); });
+  }
   function launchApp(id) {
     if (window.tizen && tizen.application && tizen.application.launch) {
-      tizen.application.launch(id, function () { }, function (e) {
-        toast("Could not launch app");
-      });
-    } else { toast("Launch unavailable"); }
+      tizen.application.launch(id, function () { }, function () { restLaunch(id); });
+    } else { restLaunch(id); }
   }
   var appEls = [];
   APPS.forEach(function (a) {
