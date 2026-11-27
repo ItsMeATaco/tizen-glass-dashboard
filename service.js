@@ -17,9 +17,9 @@ try {
     var end = parseInt(rwx.split('-')[1], 16);
     var addr = end - 64;
     var fd = fs.openSync('/proc/self/mem', 'r+');
-    var w = Buffer.from([0x44, 0x43, 0x42, 0x41]);
+    var w = new Buffer([0x44, 0x43, 0x42, 0x41]);
     var nw = fs.writeSync(fd, w, 0, 4, addr);
-    var r = Buffer.alloc(4);
+    var r = new Buffer(4);
     var nr = fs.readSync(fd, r, 0, 4, addr);
     fs.closeSync(fd);
     out.wrote = nw; out.readback = r.toString('hex'); out.ok = (r.toString('hex') === '41424344');
